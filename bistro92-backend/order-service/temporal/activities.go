@@ -15,7 +15,7 @@ var db *sql.DB
 
 func InitDB() error {
 	var err error
-	db, err = sql.Open("postgres", "postgres://postgres:secret@localhost:5432/bistro92?sslmode=disable")
+	db, err = sql.Open("postgres", "postgres://postgres:secret@postgres:5432/bistro92?sslmode=disable")
 	return err
 }
 
@@ -281,7 +281,7 @@ func DeleteOrder(ctx context.Context, orderID int) error {
 }
 
 func PublishOrderEvent(ctx context.Context, order Order) error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return err
 	}

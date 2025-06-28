@@ -15,8 +15,14 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+	// Add buffer sizes to improve performance
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 var clients = make(map[*websocket.Conn]string)
+var clientsMutex = sync.RWMutex{} // Add mutex for thread safety
 
 // Event types
 const (
@@ -81,7 +87,7 @@ func isRecentNotification(id string) bool {
 }
 
 func main() {
-	c, err := client.Dial(client.Options{HostPort: "localhost:7233"})
+	c, err := client.Dial(client.Options{HostPort: "temporal:7233"})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,6 +103,7 @@ func main() {
 
 	http.HandleFunc("/ws", handleWebSocket)
 	http.HandleFunc("/client", serveClient)
+	http.HandleFunc("/health", handleHealth)
 	go consumeRabbitMQ()
 
 	log.Println("Notification service started on :3001")
@@ -139,7 +146,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Register client
+	clientsMutex.Lock()
 	clients[conn] = room
+	clientsMutex.Unlock()
 	log.Printf("Client connected to room: %s. Total clients: %d", room, len(clients))
 
 	// Send a welcome message to confirm connection
@@ -158,8 +167,34 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Clean up on disconnect
 	defer func() {
 		log.Printf("Client disconnected from room: %s", room)
+		clientsMutex.Lock()
 		delete(clients, conn)
+		clientsMutex.Unlock()
 		conn.Close()
+	}()
+
+	// Set up ping-pong heartbeat
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	// Start ping ticker
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Handle ping in a separate goroutine
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+					log.Printf("Error sending ping: %v", err)
+					return
+				}
+			}
+		}
 	}()
 
 	// Keep the connection alive
@@ -188,7 +223,7 @@ func consumeRabbitMQ() {
 }
 
 func connectRabbitMQ() error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return err
 	}
@@ -374,6 +409,7 @@ func SendNotification(ctx context.Context, notification Notification) error {
 	var failedConnections []*websocket.Conn
 
 	// Send to all clients based on room
+	clientsMutex.RLock()
 	for conn, room := range clients {
 		// Send to appropriate rooms - send all notifications to 'orders' room
 		if room == "orders" ||
@@ -385,11 +421,14 @@ func SendNotification(ctx context.Context, notification Notification) error {
 			}
 		}
 	}
+	clientsMutex.RUnlock()
 
 	// Clean up failed connections
 	for _, conn := range failedConnections {
 		log.Printf("Removing failed connection for room: %s", clients[conn])
+		clientsMutex.Lock()
 		delete(clients, conn)
+		clientsMutex.Unlock()
 		conn.Close()
 	}
 
@@ -399,6 +438,21 @@ func SendNotification(ctx context.Context, notification Notification) error {
 	}
 
 	return nil
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	clientsMutex.RLock()
+	clientCount := len(clients)
+	clientsMutex.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "healthy",
+		"service":   "notification-service",
+		"clients":   clientCount,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 }
 
 func serveClient(w http.ResponseWriter, r *http.Request) {

@@ -11,19 +11,13 @@ POST http://localhost:8000/orders
 Content-Type: application/json
 
 {
-  "TableNumber": 8,
+  "TableNumber": 2,
   "Items": [
     {
       "ItemID": 1,
       "Name": "Pizza",
-      "Quantity": 4,
+      "Quantity": 2,
       "Price": 10.99
-    },
-    {
-      "ItemID": 2,
-      "Name": "Soda",
-      "Quantity": 7,
-      "Price": 2.99
     }
   ]
 }

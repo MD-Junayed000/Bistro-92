@@ -18,7 +18,7 @@ var temporalClient client.Client
 
 func main() {
 	var err error
-	temporalClient, err = client.Dial(client.Options{HostPort: "localhost:7233"})
+	temporalClient, err = client.Dial(client.Options{HostPort: "temporal:7233"})
 	if err != nil {
 		panic(err)
 	}

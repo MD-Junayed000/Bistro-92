@@ -19,11 +19,11 @@ var ctx = context.Background()
 
 func main() {
 	var err error
-	db, err = sql.Open("postgres", "postgres://postgres:secret@localhost:5432/bistro92?sslmode=disable")
+	db, err = sql.Open("postgres", "postgres://postgres:secret@postgres:5432/bistro92?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
-	redisClient = redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	redisClient = redis.NewClient(&redis.Options{Addr: "redis:6379"})
 	r := gin.Default()
 	r.Use(cors.Default())
 	r.GET("/dashboard/metrics", getMetrics)

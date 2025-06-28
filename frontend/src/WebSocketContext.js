@@ -71,6 +71,11 @@ export const WebSocketProvider = ({ children }) => {
         console.log('WebSocket connection established');
         setSocket(ws);
         setConnected(true);
+        
+        // Set up heartbeat response
+        ws.addEventListener('ping', () => {
+          console.log('Received ping, sending pong');
+        });
       };
       
       ws.onmessage = (event) => {
@@ -135,15 +140,18 @@ export const WebSocketProvider = ({ children }) => {
       };
       
       ws.onclose = (e) => {
-        console.log(`WebSocket connection closed: ${e.code} ${e.reason}`);
+        console.log(`WebSocket connection closed: ${e.code} ${e.reason || 'No reason provided'}`);
         setConnected(false);
         socketRef.current = null;
         
-        // Attempt to reconnect after a delay
-        reconnectTimerRef.current = setTimeout(() => {
-          console.log('Attempting to reconnect...');
-          connectWebSocket();
-        }, 5000);
+        // Only attempt to reconnect if it wasn't a manual close
+        if (e.code !== 1000) {
+          // Attempt to reconnect after a delay
+          reconnectTimerRef.current = setTimeout(() => {
+            console.log('Attempting to reconnect...');
+            connectWebSocket();
+          }, 3000); // Reduced from 5000 to 3000 for faster reconnection
+        }
       };
       
       ws.onerror = (error) => {

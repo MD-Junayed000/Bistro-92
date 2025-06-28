@@ -1,40 +1,53 @@
-version: "3.8"
 services:
   order-service:
-    build: ./order-service
+    build: ./bistro92-backend/order-service
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - rabbitmq
-      - temporal
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      temporal:
+        condition: service_started
     environment:
       - DATABASE_URL=postgres://postgres:secret@postgres:5432/bistro92?sslmode=disable
+    restart: unless-stopped
 
   notification-service:
-    build: ./notification-service
+    build: ./bistro92-backend/notification-service
     ports:
       - "3001:3001"
     depends_on:
-      - rabbitmq
-      - temporal
+      rabbitmq:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    restart: unless-stopped
 
   dashboard-service:
-    build: ./dashboard-service
+    build: ./bistro92-backend/dashboard-service
     ports:
       - "5000:5000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
     depends_on:
-      - order-service
-      - notification-service
-      - dashboard-service
+      order-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      dashboard-service:
+        condition: service_started
+    restart: unless-stopped
 
   postgres:
     image: postgres:14
@@ -45,18 +58,44 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./order-service/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./bistro92-backend/order-service/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bistro92"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   temporal:
     image: temporalio/auto-setup:1.22.0
@@ -70,7 +109,11 @@ services:
       - POSTGRES_PWD=secret
       - POSTGRES_SEEDS=postgres
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    volumes:
+      - temporal_data:/etc/temporal
+    restart: unless-stopped
   
   # Temporal UI
   temporal-ui:
@@ -80,9 +123,21 @@ services:
     ports:
       - "8085:8080"
     depends_on:
-      - temporal
+      temporal:
+        condition: service_started
+    restart: unless-stopped
 
   adminer:
     image: adminer:latest
     ports:
       - "4040:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  temporal_data:
