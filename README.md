@@ -1,18 +1,20 @@
 # Bistro-92
 
-A modern restaurant management system built with a microservices architecture.
+Bistro-92 is a modern restaurant management system that combines Go microservices, a React frontend, and event-driven workflows to power ordering, notifications, and analytics.
 
-## Overview
+## Highlights
 
-Bistro-92 is a comprehensive restaurant management platform that handles order processing, notifications, analytics, and provides a user-friendly frontend interface. The system is designed with scalability and reliability in mind using a microservices architecture.
+- Microservices for orders, notifications, and dashboards
+- Real-time updates via WebSockets, RabbitMQ, and Temporal workflows
+- PostgreSQL + Redis for persistence and caching
+- React UI with charts and dashboards
+- Docker Compose for one-command local setup
 
-## Architecture
+## Architecture & Workflows
 
-![Bistro-92 Architecture](./assets/image1.png)
-![Bistro-92 Architecture](./assets/image2.png)
-![Bistro-92 Architecture](./assets/image3.png)
-
-
+![Bistro-92 Architecture Diagram 1](./assets/image1.png)
+![Bistro-92 Architecture Diagram 2](./assets/image2.png)
+![Bistro-92 Architecture Diagram 3](./assets/image3.png)
 
 The system consists of the following components:
 
@@ -20,15 +22,6 @@ The system consists of the following components:
 - **Notification Service**: Manages communication with customers and staff
 - **Dashboard Service**: Provides analytics and reporting capabilities
 - **Frontend**: User interface for customers and restaurant staff
-
-### Technology Stack
-
-- **Backend**: Multiple microservices (languages based on service needs)
-- **Frontend**: Modern JavaScript framework
-- **Databases**: PostgreSQL, Redis
-- **Message Broker**: RabbitMQ
-- **Workflow Engine**: Temporal
-- **Containerization**: Docker & Docker Compose
 
 ## Getting Started
 
@@ -41,7 +34,7 @@ The system consists of the following components:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/bistro-92.git
+   git clone https://github.com/MD-Junayed000/Bistro-92.git
    cd bistro-92
    ```
 
@@ -63,7 +56,21 @@ The system consists of the following components:
    - RabbitMQ Management: http://localhost:15672 (user: guest, password: guest)
    - Temporal UI: http://localhost:8085
    - Adminer (Database Management): http://localhost:4040
+  
 
+
+### Repository structure
+
+```
+.
+├── assets/                     # Architecture + UI images
+├── bistro92-backend/
+│   ├── order-service/          # Orders, menu, tables
+│   ├── notification-service/   # WebSocket + RabbitMQ notifications
+│   └── dashboard-service/      # Metrics + Redis cache
+├── frontend/                   # React UI
+└── docker-compose.yml          # Local environment
+```
 ## Services
 
 ### Order Service
@@ -96,8 +103,28 @@ The frontend provides a user-friendly interface for customers to place orders an
 
 ## Database Schema
 
-The database schema is initialized using the SQL script in `order-service/db/schema.sql`. This creates the necessary tables for orders, menu items, customers, and other entities.
+The database schema is initialized using the SQL script in `bistro92-backend/order-service/db/schema.sql`. This creates the necessary tables for orders, menu items, customers, and other entities.
 
+![Bistro-92 UI Preview 1](./assets/image5.png)
+![Bistro-92 UI Preview 2](./assets/image6.png)
 
+### Service ports
 
+| Service | Port | Notes |
+| --- | --- | --- |
+| Frontend | 3000 | React UI |
+| Order Service | 8000 | REST API |
+| Notification Service | 3001 | WebSocket + REST |
+| Dashboard Service | 5000 | Metrics API |
+| PostgreSQL | 5432 | Database |
+| RabbitMQ | 5672 / 15672 | Broker + management UI |
+| Redis | 6379 | Cache |
+| Temporal | 7233 / 8085 | Workflow engine + UI |
+| Adminer | 4040 | DB browser |
 
+## Services at a Glance
+
+- **Order Service**: Menu, table, and order lifecycle endpoints; persists to PostgreSQL and emits events.
+- **Notification Service**: Consumes RabbitMQ events, triggers Temporal workflows, and pushes WebSocket notifications.
+- **Dashboard Service**: Aggregates metrics, caches results in Redis, and serves analytics endpoints.
+- **Frontend**: Customer + staff UI with charts and operational views.
