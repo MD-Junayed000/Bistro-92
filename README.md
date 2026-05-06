@@ -16,52 +16,48 @@ Bistro-92 is a modern restaurant management system that combines Go microservice
 ![Bistro-92 Architecture Diagram 2](./assets/image2.png)
 ![Bistro-92 Architecture Diagram 3](./assets/image3.png)
 
-## UI Preview
+The system consists of the following components:
 
-![Bistro-92 UI Preview 1](./assets/image4.png)
-![Bistro-92 UI Preview 2](./assets/image5.png)
-![Bistro-92 UI Preview 3](./assets/image6.png)
+- **Order Service**: Handles customer orders, menu management, and payment processing
+- **Notification Service**: Manages communication with customers and staff
+- **Dashboard Service**: Provides analytics and reporting capabilities
+- **Frontend**: User interface for customers and restaurant staff
 
-## For Beginners (Quick Start)
+## Getting Started
 
 ### Prerequisites
 
-- Docker + Docker Compose
+- Docker and Docker Compose
 - Git
 
-### Run the full stack
+### Installation
 
-```bash
-git clone https://github.com/MD-Junayed000/Bistro-92.git
-cd Bistro-92
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MD-Junayed000/Bistro-92.git
+   cd bistro-92
+   ```
 
-docker-compose up -d
-```
+2. Start the services:
+   ```bash
+   docker-compose up -d
+   ```
 
-### Open the apps
+3. Initialize the database (if not done automatically):
+   ```bash
+   docker-compose exec postgres psql -U postgres -d bistro92 -f /docker-entrypoint-initdb.d/init.sql
+   ```
 
-- Frontend: http://localhost:3000
-- Order Service API: http://localhost:8000
-- Notification Service API: http://localhost:3001
-- Dashboard Service API: http://localhost:5000
-- RabbitMQ Management: http://localhost:15672 (guest/guest)
-- Temporal UI: http://localhost:8085
-- Adminer (DB UI): http://localhost:4040
+4. Access the services:
+   - Frontend: http://localhost:3000
+   - Order Service API: http://localhost:8000
+   - Notification Service API: http://localhost:3001
+   - Dashboard Service: http://localhost:5000
+   - RabbitMQ Management: http://localhost:15672 (user: guest, password: guest)
+   - Temporal UI: http://localhost:8085
+   - Adminer (Database Management): http://localhost:4040
+  
 
-### Reset the database (optional)
-
-```bash
-docker-compose exec postgres psql -U postgres -d bistro92 -f /docker-entrypoint-initdb.d/init.sql
-```
-
-## For Developers (Local Development)
-
-### Tech stack
-
-- Go 1.23 (Gin, Temporal SDK)
-- React 18 (React Router, Chart.js, Bootstrap)
-- PostgreSQL, Redis, RabbitMQ
-- Docker & Docker Compose
 
 ### Repository structure
 
@@ -75,25 +71,42 @@ docker-compose exec postgres psql -U postgres -d bistro92 -f /docker-entrypoint-
 ├── frontend/                   # React UI
 └── docker-compose.yml          # Local environment
 ```
+## Services
 
-### Local workflow
+### Order Service
 
-1. Start the infrastructure (recommended):
-   ```bash
-   docker-compose up -d postgres rabbitmq redis temporal temporal-ui adminer
-   ```
-2. Run the backend services with Docker (simple):
-   ```bash
-   docker-compose up -d --build order-service notification-service dashboard-service
-   ```
-3. Run the frontend locally (hot reload):
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+The Order Service is responsible for processing customer orders, managing the menu, and handling payment processing. It communicates with the PostgreSQL database and uses RabbitMQ for event-driven communication with other services.
 
-> The Go services are configured to connect to Docker Compose hostnames (postgres, rabbitmq, temporal, redis). If you run them outside Docker, update the connection strings or map those hostnames locally.
+- **Port**: 8000
+- **Dependencies**: PostgreSQL, RabbitMQ, Temporal
+
+### Notification Service
+
+The Notification Service handles all communication with customers and staff, including order confirmations, updates, and marketing messages. It integrates with external communication providers for SMS, email, and push notifications.
+
+- **Port**: 3001
+- **Dependencies**: RabbitMQ, Temporal
+
+### Dashboard Service
+
+The Dashboard Service provides analytics and reporting capabilities, helping restaurant managers make data-driven decisions. It processes data from other services and presents it in an intuitive dashboard.
+
+- **Port**: 5000
+- **Dependencies**: PostgreSQL, Redis
+
+### Frontend
+
+The frontend provides a user-friendly interface for customers to place orders and for restaurant staff to manage operations. It communicates with the backend services via APIs.
+
+- **Port**: 3000
+- **Dependencies**: Order Service, Notification Service, Dashboard Service
+
+## Database Schema
+
+The database schema is initialized using the SQL script in `bistro92-backend/order-service/db/schema.sql`. This creates the necessary tables for orders, menu items, customers, and other entities.
+
+![Bistro-92 UI Preview 1](./assets/image5.png)
+![Bistro-92 UI Preview 2](./assets/image6.png)
 
 ### Service ports
 
@@ -108,10 +121,6 @@ docker-compose exec postgres psql -U postgres -d bistro92 -f /docker-entrypoint-
 | Redis | 6379 | Cache |
 | Temporal | 7233 / 8085 | Workflow engine + UI |
 | Adminer | 4040 | DB browser |
-
-### Database schema
-
-The schema lives at `bistro92-backend/order-service/db/schema.sql` and is mounted into the PostgreSQL container during startup.
 
 ## Services at a Glance
 
